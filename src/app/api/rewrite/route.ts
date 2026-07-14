@@ -21,7 +21,30 @@ const tonePrompts: Record<string, string> = {
   creative: "креативно, с юмором и неожиданными оборотами",
 };
 
+// Глобальный счётчик
+let dailyCount = 0;
+let lastReset = new Date().toISOString().split("T")[0];
+
+function resetIfNewDay() {
+  const today = new Date().toISOString().split("T")[0];
+  if (today !== lastReset) {
+    dailyCount = 0;
+    lastReset = today;
+  }
+}
+
 export async function POST(request: Request) {
+  const globalLimit = Number(process.env.DAILY_GLOBAL_LIMIT) || Infinity;
+
+  resetIfNewDay();
+
+  if (dailyCount >= globalLimit) {
+    return NextResponse.json(
+      { error: "Ежедневный лимит генераций исчерпан. Попробуйте завтра." },
+      { status: 429 },
+    );
+  }
+
   try {
     const { text, platform, tone } = await request.json();
 
@@ -51,6 +74,9 @@ export async function POST(request: Request) {
     });
 
     const rewritten = completion.choices[0]?.message?.content?.trim() || "";
+
+    // Увеличиваем счётчик только при успехе
+    dailyCount++;
 
     return NextResponse.json({ result: rewritten });
   } catch (error: unknown) {
