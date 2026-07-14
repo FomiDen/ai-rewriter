@@ -9,7 +9,7 @@ import {
   generatePremiumKey,
 } from "@/entities/premium/lib";
 
-const DAILY_LIMIT = 1;
+const DAILY_LIMIT = 3;
 const STORAGE_USAGE_KEY = "ai_usage";
 const STORAGE_PREMIUM_KEY = "ai_premium";
 

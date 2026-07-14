@@ -14,6 +14,29 @@ interface RewriteFormProps {
   onSuccess?: () => void;
 }
 
+// Проверка на осмысленность текста
+function isMeaningful(text: string): boolean {
+  const cleaned = text.trim();
+  if (cleaned.length < 5) return false;
+
+  // Должна быть хотя бы одна буква (русская или английская)
+  const hasLetter = /[a-zA-Zа-яА-ЯёЁ]/.test(cleaned);
+  if (!hasLetter) return false;
+
+  // Доля букв среди всех непробельных символов должна быть >= 50%
+  const nonSpaceChars = cleaned.replace(/\s/g, "").split("");
+  const letterCount = nonSpaceChars.filter((ch) =>
+    /[a-zA-Zа-яА-ЯёЁ]/.test(ch),
+  ).length;
+  if (letterCount / nonSpaceChars.length < 0.5) return false;
+
+  // Минимум два слова (разделённых пробелом)
+  const words = cleaned.split(/\s+/).filter((w) => w.length > 0);
+  if (words.length < 2) return false;
+
+  return true;
+}
+
 export const RewriteForm = ({
   disabled = false,
   onSuccess,
@@ -23,10 +46,23 @@ export const RewriteForm = ({
   const [tone, setTone] = useState<ToneId>("casual");
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const handleRewrite = async () => {
+    setError(false);
     if (!text.trim()) {
       toast.error("Введи текст");
+      return;
+    }
+    if (!isMeaningful(text)) {
+      setError(true);
+      toast.error("Ничего не понятно 😅. ", {
+        style: {
+          background: "#2D1B2E",
+          color: "#F9A8D4",
+          border: "1px solid #EC4899",
+        },
+      });
       return;
     }
     setLoading(true);
@@ -59,12 +95,24 @@ export const RewriteForm = ({
         </label>
         <textarea
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            if (error) setError(false);
+          }}
           placeholder="Напиши что-нибудь..."
           rows={4}
           disabled={disabled}
-          className="w-full bg-brand-dark/50 border border-white/10 rounded-xl p-4 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-purple/50 resize-none transition disabled:opacity-50 disabled:cursor-not-allowed cursor-text"
+          className={`w-full bg-brand-dark/50 border rounded-xl p-4 text-white placeholder-white/30 focus:outline-none focus:ring-2 resize-none transition disabled:opacity-50 disabled:cursor-not-allowed cursor-text ${
+            error
+              ? "border-red-500 focus:ring-red-500/50"
+              : "border-white/10 focus:ring-brand-purple/50"
+          }`}
         />
+        {error && (
+          <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+            <span>😅</span> Ничего не понятно. 
+          </p>
+        )}
       </div>
 
       {/* Платформы */}
