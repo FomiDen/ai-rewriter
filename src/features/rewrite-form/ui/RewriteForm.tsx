@@ -14,25 +14,56 @@ interface RewriteFormProps {
   onSuccess?: () => void;
 }
 
-// Проверка на осмысленность текста
 function isMeaningful(text: string): boolean {
   const cleaned = text.trim();
-  if (cleaned.length < 5) return false;
 
-  // Должна быть хотя бы одна буква (русская или английская)
-  const hasLetter = /[a-zA-Zа-яА-ЯёЁ]/.test(cleaned);
-  if (!hasLetter) return false;
+  // 1. Длина без пробелов >= 10
+  const nonSpaceChars = cleaned.replace(/\s/g, "");
+  if (nonSpaceChars.length < 10) return false;
 
-  // Доля букв среди всех непробельных символов должна быть >= 50%
-  const nonSpaceChars = cleaned.replace(/\s/g, "").split("");
-  const letterCount = nonSpaceChars.filter((ch) =>
-    /[a-zA-Zа-яА-ЯёЁ]/.test(ch),
-  ).length;
-  if (letterCount / nonSpaceChars.length < 0.5) return false;
+  // 2. Доля букв >= 50% (уже было)
+  const chars = nonSpaceChars.split("");
+  const letterCount = chars.filter((ch) => /[a-zA-Zа-яА-ЯёЁ]/.test(ch)).length;
+  if (letterCount / chars.length < 0.5) return false;
 
-  // Минимум два слова (разделённых пробелом)
+  // 3. Минимум 2 слова
   const words = cleaned.split(/\s+/).filter((w) => w.length > 0);
   if (words.length < 2) return false;
+
+  // Гласные
+  const vowels = /[аеёиоуыэюяaeiouy]/i;
+
+  for (const word of words) {
+    // 4. В слове должна быть гласная
+    if (!vowels.test(word)) return false;
+
+    // 5. Максимальная цепочка согласных <= 4
+    let maxConsonants = 0;
+    let currentConsonants = 0;
+    for (const ch of word) {
+      if (/[a-zA-Zа-яА-ЯёЁ]/.test(ch) && !vowels.test(ch)) {
+        currentConsonants++;
+        if (currentConsonants > maxConsonants)
+          maxConsonants = currentConsonants;
+      } else {
+        currentConsonants = 0;
+      }
+    }
+    if (maxConsonants > 4) return false;
+
+    // 6. Запрет смешанных алфавитов в одном слове
+    const hasCyrillic = /[а-яА-ЯёЁ]/.test(word);
+    const hasLatin = /[a-zA-Z]/.test(word);
+    if (hasCyrillic && hasLatin) return false;
+  }
+
+  // 7. Доля самого частого символа <= 40%
+  const freq: Record<string, number> = {};
+  for (const ch of chars) {
+    freq[ch] = (freq[ch] || 0) + 1;
+  }
+  const maxFreq = Math.max(...Object.values(freq));
+  if (maxFreq / chars.length > 0.4) return false;
 
   return true;
 }
@@ -110,7 +141,7 @@ export const RewriteForm = ({
         />
         {error && (
           <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-            <span>😅</span> Ничего не понятно. 
+            <span>😅</span> Ничего не понятно.
           </p>
         )}
       </div>
