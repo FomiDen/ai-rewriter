@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import type { NextRequest } from "next/server";
 
 const openai = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
@@ -21,43 +22,77 @@ const tonePrompts: Record<string, string> = {
   creative: "креативно, с юмором и неожиданными оборотами",
 };
 
-// Глобальный счётчик
-let dailyCount = 0;
-let lastReset = new Date().toISOString().split("T")[0];
+const IP_LIMIT = 3;
+const GLOBAL_LIMIT = Number(process.env.DAILY_GLOBAL_LIMIT) || Infinity;
 
-function resetIfNewDay() {
-  const today = new Date().toISOString().split("T")[0];
-  if (today !== lastReset) {
-    dailyCount = 0;
-    lastReset = today;
-  }
+// Хранилище в памяти: IP → { count, date }
+const ipUsage = new Map<string, { count: number; date: string }>();
+let globalCount = 0;
+let globalDate = new Date().toISOString().slice(0, 10);
+
+function getToday(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
-export async function POST(request: Request) {
-  const globalLimit = Number(process.env.DAILY_GLOBAL_LIMIT) || Infinity;
+function getIP(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  const realIp = request.headers.get("x-real-ip");
+  return realIp || "unknown";
+}
 
-  resetIfNewDay();
+interface RewriteRequestBody {
+  text: string;
+  platform: string;
+  tone: string;
+}
 
-  if (dailyCount >= globalLimit) {
+export async function POST(request: NextRequest) {
+  const today = getToday();
+
+  // Сброс глобального счётчика при новом дне
+  if (globalDate !== today) {
+    globalCount = 0;
+    globalDate = today;
+  }
+
+  if (globalCount >= GLOBAL_LIMIT) {
     return NextResponse.json(
-      { error: "Ежедневный лимит генераций исчерпан. Попробуйте завтра." },
+      { error: "Общий дневной лимит сервиса исчерпан. Попробуйте завтра." },
+      { status: 429 },
+    );
+  }
+
+  let body: RewriteRequestBody;
+  try {
+    body = (await request.json()) as RewriteRequestBody;
+  } catch {
+    return NextResponse.json({ error: "Неверный JSON" }, { status: 400 });
+  }
+
+  const { text, platform, tone } = body;
+  if (!text || !platform || !tone) {
+    return NextResponse.json({ error: "Недостаточно данных" }, { status: 400 });
+  }
+
+  // Проверка лимита по IP
+  const ip = getIP(request);
+  const ipData = ipUsage.get(ip) || { count: 0, date: today };
+  if (ipData.date !== today) {
+    ipData.count = 0;
+    ipData.date = today;
+  }
+
+  if (ipData.count >= IP_LIMIT) {
+    return NextResponse.json(
+      { error: "Бесплатный лимит (3 в день) исчерпан. Попробуйте завтра." },
       { status: 429 },
     );
   }
 
   try {
-    const { text, platform, tone } = await request.json();
-
-    if (!text || !platform || !tone) {
-      return NextResponse.json(
-        { error: "Недостаточно данных" },
-        { status: 400 },
-      );
-    }
-
     const platformGuide = platformPrompts[platform] || "";
     const toneGuide = tonePrompts[tone] || "";
-
     const systemMessage = `Ты — профессиональный SMM-редактор. Перепиши текст пользователя в соответствии с требованиями. 
 Стиль платформы: ${platformGuide}. 
 Тон: ${toneGuide}.
@@ -75,8 +110,10 @@ export async function POST(request: Request) {
 
     const rewritten = completion.choices[0]?.message?.content?.trim() || "";
 
-    // Увеличиваем счётчик только при успехе
-    dailyCount++;
+    // Увеличиваем счётчики только при успехе
+    ipData.count += 1;
+    ipUsage.set(ip, ipData);
+    globalCount += 1;
 
     return NextResponse.json({ result: rewritten });
   } catch (error: unknown) {

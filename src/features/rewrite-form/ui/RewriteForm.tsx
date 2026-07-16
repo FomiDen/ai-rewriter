@@ -16,55 +16,15 @@ interface RewriteFormProps {
 
 function isMeaningful(text: string): boolean {
   const cleaned = text.trim();
-
-  // 1. Длина без пробелов >= 10
-  const nonSpaceChars = cleaned.replace(/\s/g, "");
-  if (nonSpaceChars.length < 10) return false;
-
-  // 2. Доля букв >= 50% (уже было)
-  const chars = nonSpaceChars.split("");
-  const letterCount = chars.filter((ch) => /[a-zA-Zа-яА-ЯёЁ]/.test(ch)).length;
-  if (letterCount / chars.length < 0.5) return false;
-
-  // 3. Минимум 2 слова
+  if (cleaned.replace(/\s/g, "").length < 10) return false;
+  if (!/[a-zA-Zа-яА-ЯёЁ]/.test(cleaned)) return false;
   const words = cleaned.split(/\s+/).filter((w) => w.length > 0);
   if (words.length < 2) return false;
-
-  // Гласные
-  const vowels = /[аеёиоуыэюяaeiouy]/i;
-
-  for (const word of words) {
-    // 4. В слове должна быть гласная
-    if (!vowels.test(word)) return false;
-
-    // 5. Максимальная цепочка согласных <= 4
-    let maxConsonants = 0;
-    let currentConsonants = 0;
-    for (const ch of word) {
-      if (/[a-zA-Zа-яА-ЯёЁ]/.test(ch) && !vowels.test(ch)) {
-        currentConsonants++;
-        if (currentConsonants > maxConsonants)
-          maxConsonants = currentConsonants;
-      } else {
-        currentConsonants = 0;
-      }
-    }
-    if (maxConsonants > 4) return false;
-
-    // 6. Запрет смешанных алфавитов в одном слове
-    const hasCyrillic = /[а-яА-ЯёЁ]/.test(word);
-    const hasLatin = /[a-zA-Z]/.test(word);
-    if (hasCyrillic && hasLatin) return false;
-  }
-
-  // 7. Доля самого частого символа <= 40%
-  const freq: Record<string, number> = {};
-  for (const ch of chars) {
-    freq[ch] = (freq[ch] || 0) + 1;
-  }
-  const maxFreq = Math.max(...Object.values(freq));
-  if (maxFreq / chars.length > 0.4) return false;
-
+  const nonSpace = cleaned.replace(/\s/g, "").split("");
+  const letterCount = nonSpace.filter((ch) =>
+    /[a-zA-Zа-яА-ЯёЁ]/.test(ch),
+  ).length;
+  if (letterCount / nonSpace.length < 0.4) return false;
   return true;
 }
 
@@ -87,7 +47,7 @@ export const RewriteForm = ({
     }
     if (!isMeaningful(text)) {
       setError(true);
-      toast.error("Ничего не понятно 😅. ", {
+      toast.error("Ничего не понятно 😅 Введи осмысленный текст", {
         style: {
           background: "#2D1B2E",
           color: "#F9A8D4",
@@ -102,7 +62,7 @@ export const RewriteForm = ({
       const rewritten = await fetchRewrite({ text, platform, tone });
       setResult(rewritten);
       toast.success("Готово!");
-      onSuccess?.();
+      onSuccess?.(); // увеличивает счётчик на клиенте
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Ошибка");
     } finally {
@@ -119,7 +79,6 @@ export const RewriteForm = ({
 
   return (
     <div className="space-y-6">
-      {/* Поле ввода */}
       <div>
         <label className="block text-sm font-medium text-white/70 mb-2">
           Твой текст
@@ -141,12 +100,11 @@ export const RewriteForm = ({
         />
         {error && (
           <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-            <span>😅</span> Ничего не понятно.
+            <span>😅</span> Ничего не понятно. Введи осмысленный текст.
           </p>
         )}
       </div>
 
-      {/* Платформы */}
       <div>
         <label className="block text-sm font-medium text-white/70 mb-3">
           Платформа
@@ -173,7 +131,6 @@ export const RewriteForm = ({
         </div>
       </div>
 
-      {/* Тон */}
       <div>
         <label className="block text-sm font-medium text-white/70 mb-3">
           Тон общения
@@ -196,7 +153,6 @@ export const RewriteForm = ({
         </div>
       </div>
 
-      {/* Кнопка и результат */}
       <Button
         onClick={handleRewrite}
         loading={loading}

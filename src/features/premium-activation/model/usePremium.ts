@@ -1,4 +1,4 @@
-// src/features/premium-activation/model/usePremium.ts
+"use client";
 import { useState, useCallback } from "react";
 import { storage } from "@/shared/lib/storage";
 import { getTodayISO } from "@/shared/lib/dates";
@@ -74,7 +74,9 @@ export function usePremium(isAdmin: boolean) {
     canGenerate,
     incrementUsage,
     premiumActive,
-    remaining: premiumActive ? Infinity : DAILY_LIMIT - usage.count,
+    remaining: premiumActive
+      ? Infinity
+      : Math.max(0, DAILY_LIMIT - usage.count),
     activateKey,
     generateKey,
   };
