@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 Верни ТОЛЬКО готовый текст, без пояснений и кавычек.`;
 
     const completion = await openai.chat.completions.create({
-      model: "deepseek-chat",
+      model: "deepseek-v4-flash",
       messages: [
         { role: "system", content: systemMessage },
         { role: "user", content: text },
