@@ -12,4 +12,5 @@ export {
   ArrowRight,
   Users,
   MessageCircle,
+  AtSign,
 } from "lucide-react";
