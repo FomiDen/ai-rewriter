@@ -62,7 +62,7 @@ export const RewriteForm = ({
       const rewritten = await fetchRewrite({ text, platform, tone });
       setResult(rewritten);
       toast.success("Готово!");
-      onSuccess?.(); // увеличивает счётчик на клиенте
+      onSuccess?.();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Ошибка");
     } finally {
@@ -79,6 +79,7 @@ export const RewriteForm = ({
 
   return (
     <div className="space-y-6">
+      {/* Поле ввода */}
       <div>
         <label className="block text-sm font-medium text-white/70 mb-2">
           Твой текст
@@ -90,7 +91,7 @@ export const RewriteForm = ({
             if (error) setError(false);
           }}
           placeholder="Напиши что-нибудь..."
-          rows={4}
+          rows={3}
           disabled={disabled}
           className={`w-full bg-brand-dark/50 border rounded-xl p-4 text-white placeholder-white/30 focus:outline-none focus:ring-2 resize-none transition disabled:opacity-50 disabled:cursor-not-allowed cursor-text ${
             error
@@ -105,43 +106,46 @@ export const RewriteForm = ({
         )}
       </div>
 
+      {/* Платформы */}
       <div>
         <label className="block text-sm font-medium text-white/70 mb-3">
           Платформа
         </label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {platforms.map(({ id, label, icon: Icon, color }) => (
             <button
               key={id}
               onClick={() => setPlatform(id)}
               disabled={disabled}
-              className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
+              className={`min-w-0 flex items-center justify-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-xl border transition-all text-xs sm:text-sm font-medium ${
                 platform === id
                   ? "border-brand-purple bg-brand-purple/20 text-white shadow-lg shadow-brand-purple/20"
                   : "border-white/10 hover:border-white/30 text-white/60"
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               <Icon
-                size={18}
+                size={16}
+                className="sm:w-4.5 sm:h-4.5"
                 style={{ color: platform === id ? color : undefined }}
               />
-              <span className="text-sm font-medium">{label}</span>
+              <span>{label}</span>
             </button>
           ))}
         </div>
       </div>
 
+      {/* Тон */}
       <div>
         <label className="block text-sm font-medium text-white/70 mb-3">
           Тон общения
         </label>
-        <div className="flex gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {tones.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => setTone(id)}
               disabled={disabled}
-              className={`flex-1 py-1.5 px-2 rounded-xl border transition-all text-xs sm:text-sm font-medium ${
+              className={`w-full py-1.5 px-2 rounded-xl border transition-all text-xs sm:text-sm font-medium whitespace-normal ${
                 tone === id
                   ? "border-brand-pink bg-brand-pink/20 text-white shadow-lg shadow-brand-pink/20"
                   : "border-white/10 hover:border-white/30 text-white/60"

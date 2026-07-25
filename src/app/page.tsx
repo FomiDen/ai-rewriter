@@ -39,7 +39,6 @@ async function verifyAdminKey(key: string): Promise<boolean> {
 export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // При загрузке проверяем, сохранён ли ключ в localStorage, и валидируем его на сервере
   useEffect(() => {
     const storedKey = localStorage.getItem("admin_key");
     if (storedKey) {
@@ -73,7 +72,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 overflow-x-hidden max-w-full">
       <Toaster
         position="top-center"
         toastOptions={{
@@ -89,7 +88,7 @@ export default function Home() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="text-center mb-10"
+        className="text-center mb-10 max-w-full px-2"
       >
         <h1 className="text-4xl sm:text-5xl font-bold mb-3">
           AI <span className="text-gradient">Рерайтер</span> для соцсетей
@@ -103,6 +102,7 @@ export default function Home() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
+        className="w-full max-w-2xl mx-auto"
       >
         <RewriterWidget isAdmin={isAdmin} />
       </motion.div>

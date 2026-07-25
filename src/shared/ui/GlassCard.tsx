@@ -8,7 +8,7 @@ interface GlassCardProps {
 export const GlassCard = ({ children, className = "" }: GlassCardProps) => {
   return (
     <div
-      className={`glass-card w-full max-w-2xl p-6 sm:p-8 rounded-3xl space-y-6 ${className}`}
+      className={`glass-card w-full mx-auto p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl space-y-4 sm:space-y-6 overflow-hidden ${className}`}
     >
       {children}
     </div>

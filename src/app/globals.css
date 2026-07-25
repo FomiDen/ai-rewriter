@@ -67,3 +67,9 @@ body {
   min-height: 100vh;
   font-family: var(--font-sans);
 }
+html,
+body {
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
