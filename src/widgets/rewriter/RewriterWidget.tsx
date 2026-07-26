@@ -20,6 +20,8 @@ export const RewriterWidget = ({ isAdmin }: RewriterWidgetProps) => {
     generateKey,
   } = usePremium(isAdmin);
 
+  const adminKey = isAdmin ? localStorage.getItem("admin_key") : null;
+
   const handlePay = () => {
     window.open("https://t.me/DeniFom", "_blank");
   };
@@ -35,7 +37,11 @@ export const RewriterWidget = ({ isAdmin }: RewriterWidgetProps) => {
         onActivateKey={activateKey}
         onGenerateKey={generateKey}
       />
-      <RewriteForm disabled={!canGenerate} onSuccess={incrementUsage} />
+      <RewriteForm
+        disabled={!canGenerate}
+        onSuccess={incrementUsage}
+        adminKey={adminKey}
+      />
     </GlassCard>
   );
 };

@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 interface RewriteFormProps {
   disabled?: boolean;
   onSuccess?: () => void;
+  adminKey?: string | null;
 }
 
 function isMeaningful(text: string): boolean {
@@ -31,6 +32,7 @@ function isMeaningful(text: string): boolean {
 export const RewriteForm = ({
   disabled = false,
   onSuccess,
+  adminKey,
 }: RewriteFormProps) => {
   const [text, setText] = useState("");
   const [platform, setPlatform] = useState<PlatformId>("instagram");
@@ -59,7 +61,7 @@ export const RewriteForm = ({
     setLoading(true);
     setResult("");
     try {
-      const rewritten = await fetchRewrite({ text, platform, tone });
+      const rewritten = await fetchRewrite({ text, platform, tone, adminKey });
       setResult(rewritten);
       toast.success("Готово!");
       onSuccess?.();

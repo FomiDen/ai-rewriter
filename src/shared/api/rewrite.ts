@@ -2,6 +2,7 @@ interface RewriteParams {
   text: string;
   platform: string;
   tone: string;
+  adminKey?: string | null;
 }
 
 export async function fetchRewrite(params: RewriteParams): Promise<string> {

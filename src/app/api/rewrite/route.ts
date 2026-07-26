@@ -22,13 +22,13 @@ const tonePrompts: Record<string, string> = {
   casual: "в очень непринуждённом, разговорном стиле",
   professional: "в деловом, но тёплом тоне",
   creative: "креативно, с юмором и неожиданными оборотами",
-  aggressive: "супер-агрессивно, дерзко, с вызовом и напором, используй резкие фразы и капс",
+  aggressive:
+    "супер-агрессивно, дерзко, с вызовом и напором, используй резкие фразы и капс",
 };
 
 const IP_LIMIT = 3;
 const GLOBAL_LIMIT = Number(process.env.DAILY_GLOBAL_LIMIT) || Infinity;
 
-// Хранилище в памяти: IP → { count, date }
 const ipUsage = new Map<string, { count: number; date: string }>();
 let globalCount = 0;
 let globalDate = new Date().toISOString().slice(0, 10);
@@ -48,6 +48,7 @@ interface RewriteRequestBody {
   text: string;
   platform: string;
   tone: string;
+  adminKey?: string | null;
 }
 
 export async function POST(request: NextRequest) {
@@ -59,13 +60,6 @@ export async function POST(request: NextRequest) {
     globalDate = today;
   }
 
-  if (globalCount >= GLOBAL_LIMIT) {
-    return NextResponse.json(
-      { error: "Общий дневной лимит сервиса исчерпан. Попробуйте завтра." },
-      { status: 429 },
-    );
-  }
-
   let body: RewriteRequestBody;
   try {
     body = (await request.json()) as RewriteRequestBody;
@@ -73,24 +67,36 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Неверный JSON" }, { status: 400 });
   }
 
-  const { text, platform, tone } = body;
+  const { text, platform, tone, adminKey } = body;
   if (!text || !platform || !tone) {
     return NextResponse.json({ error: "Недостаточно данных" }, { status: 400 });
   }
 
-  // Проверка лимита по IP
-  const ip = getIP(request);
-  const ipData = ipUsage.get(ip) || { count: 0, date: today };
-  if (ipData.date !== today) {
-    ipData.count = 0;
-    ipData.date = today;
-  }
+  // Проверка, является ли запрос админским
+  const isAdminRequest = adminKey && adminKey === process.env.ADMIN_KEY;
 
-  if (ipData.count >= IP_LIMIT) {
-    return NextResponse.json(
-      { error: "Бесплатный лимит (3 в день) исчерпан. Попробуйте завтра." },
-      { status: 429 },
-    );
+  // Если не админ — проверяем лимиты
+  if (!isAdminRequest) {
+    if (globalCount >= GLOBAL_LIMIT) {
+      return NextResponse.json(
+        { error: "Общий дневной лимит сервиса исчерпан. Попробуйте завтра." },
+        { status: 429 },
+      );
+    }
+
+    const ip = getIP(request);
+    const ipData = ipUsage.get(ip) || { count: 0, date: today };
+    if (ipData.date !== today) {
+      ipData.count = 0;
+      ipData.date = today;
+    }
+
+    if (ipData.count >= IP_LIMIT) {
+      return NextResponse.json(
+        { error: "Бесплатный лимит (3 в день) исчерпан. Попробуйте завтра." },
+        { status: 429 },
+      );
+    }
   }
 
   try {
@@ -113,10 +119,14 @@ export async function POST(request: NextRequest) {
 
     const rewritten = completion.choices[0]?.message?.content?.trim() || "";
 
-    // Увеличиваем счётчики только при успехе
-    ipData.count += 1;
-    ipUsage.set(ip, ipData);
-    globalCount += 1;
+    // Увеличиваем счётчики только для обычных пользователей
+    if (!isAdminRequest) {
+      const ip = getIP(request);
+      const ipData = ipUsage.get(ip) || { count: 0, date: today };
+      ipData.count += 1;
+      ipUsage.set(ip, ipData);
+      globalCount += 1;
+    }
 
     return NextResponse.json({ result: rewritten });
   } catch (error: unknown) {
